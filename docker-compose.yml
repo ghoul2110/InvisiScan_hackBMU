@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  backend:
+    container_name: backend
+    build:
+      context: ./Zensafe_Web_Application/backend
+      secrets:
+        - dockerhub_cred
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URI: "mongodb://mongo:27017/UrbanGuard"
+      FRONTEND_URL: "http://frontend:5173"  # Pass the frontend container URL to backend
+    networks:
+      - mern-network
+    command: >
+      sh -c "npm install && npm run start"  # Adjust according to your startup script
+
+  frontend:
+    container_name: frontend
+    build: ./Zensafe_Web_Application/frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - mern-network
+    environment:
+      - VITE_HOST=0.0.0.0  # Allows external access from Docker
+      - VITE_API_URL=http://backend:5000  # Set backend URL for frontend
+
+  mongo:
+    container_name: mongo
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - mern-network
+
+
+  prometheus:
+    image : prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - mern-network
+
+
+volumes:
+  mongo-data:
+
+secrets:
+  dockerhub_cred:
+    file: ./dockerhub_cred
+
+networks:
+  mern-network:
+    driver: bridge
